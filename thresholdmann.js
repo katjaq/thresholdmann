@@ -15,9 +15,9 @@ const globals = {
   brightness: 1,
   contrast: 1,
   selectedControlPoint: null,
-  selectedTool: "Select",
-  selectedDirection: "SelectUp",
-  selectedOverlay: "Threshold Mask"
+  selectedTool: 'Select',
+  selectedDirection: 'SelectUp',
+  selectedOverlay: 'Threshold Mask'
 };
 window.globals = globals;
 
@@ -34,12 +34,12 @@ const interpolation = (pos) => {
   let totalw = 0;
 
   // value from control points
-  for (let k=0; k<points.length; k++) {
+  for (let k = 0; k < points.length; k++) {
     const d =
       (pos[0] - points[k][0]) ** 2 +
       (pos[1] - points[k][1]) ** 2 +
       (pos[2] - points[k][2]) ** 2;
-    const w = 1 / (d + 0.001);
+    const w = 1 / (d + 0.001); // adding a distance of 0.001 times voxel size to avoid division by 0 at the exact position of control points
     val += w * values[k];
     totalw += w;
   }
@@ -56,15 +56,15 @@ const displayControlPointsTable = () => {
   const {points, values, selectedControlPoint: cpid} = globals;
   let cpidIndex = -1;
   if (cpid) {
-    cpidIndex = globals.selectedControlPoint.replace("cp", "")|0;
+    cpidIndex = globals.selectedControlPoint.replace('cp', '') | 0;
   }
 
   // display control point table
-  let str = "";
-  for(let ind=0; ind < points.length; ind++) {
+  let str = '';
+  for (let ind = 0; ind < points.length; ind++) {
     const [i, j, k] = points[ind];
     str += `
-<tr onclick="selectRow(this)" data-cpid="cp${i}" data-ijk="${i},${j},${k}" ${(cpidIndex === ind)?'class="selected"':''}>
+<tr onclick="selectRow(this)" data-cpid="cp${i}" data-ijk="${i},${j},${k}" ${(cpidIndex === ind) ? 'class="selected"' : ''}>
   <td class="ijk">${i}</td>
   <td class="ijk">${j}</td>
   <td class="ijk">${k}</td>
@@ -72,7 +72,7 @@ const displayControlPointsTable = () => {
     <input type="range" step="any" min=0 max=255 value=${values[ind]} oninput="changeThreshold(event)"/>
   </td>
   <td class="text-val">
-    <input type="text" class="value" min=0 max=255 value="${values[ind].toFixed(0)}" onchange="inputThreshold(this)"/>
+    <input type="number" class="value" min=0 max=255 value="${values[ind].toFixed(0)}" onchange="inputThreshold(this)"/>
   </td>
 </tr>
 `;
@@ -82,7 +82,7 @@ const displayControlPointsTable = () => {
 
 const slice2volume = (plane, x, y, slice, H) => {
   let s;
-  switch(plane) {
+  switch (plane) {
   case 'sag':
     s = [slice, x, H - 1 - y];
     break;
@@ -103,9 +103,9 @@ const canvas2voxel = (ev) => {
   const [{slice, plane}] = mv.views;
   const {W, H} = mv.dimensions.voxel[plane];
   const height2 = H * width / W;
-  const offset = (height - height2)/2;
-  const x = mv.views[0].canvas.width * (ev.clientX - left)/width|0;
-  const y = mv.views[0].canvas.height * (ev.clientY - (top + offset))/height2|0;
+  const offset = (height - height2) / 2;
+  const x = mv.views[0].canvas.width * (ev.clientX - left) / width | 0;
+  const y = mv.views[0].canvas.height * (ev.clientY - (top + offset)) / height2 | 0;
 
   const s = slice2volume(plane, x, y, slice, H);
 
@@ -130,8 +130,7 @@ const voxel2canvas = (point) => {
   const {W, H} = mv.dimensions.voxel[plane];
   const height = H * width / W;
   const Hlarge = H * heightLarge / height;
-  const offset = (Hlarge - H)/2;
-  // eslint-disable-next-line new-cap
+  const offset = (Hlarge - H) / 2;
   const [i, j, k] = point;
   let slice, x, y;
   switch (plane) {
@@ -149,16 +148,16 @@ const voxel2canvas = (point) => {
 };
 
 const displayControlPoints = () => {
-  if(typeof globals.points === 'undefined') {
+  if (typeof globals.points === 'undefined') {
     return;
   }
 
   $('.cpoint').remove();
   // document.querySelector(".cpoint").remove();
 
-  for(let i=0; i<globals.points.length; i++) {
+  for (let i = 0; i < globals.points.length; i++) {
     const [x, y, slice] = voxel2canvas(globals.points[i]);
-    if(slice !== globals.mv.views[0].slice) {
+    if (slice !== globals.mv.views[0].slice) {
       continue;
     }
     const str = `<div class="cpoint" id="cp${i}" data-ijk="${globals.points[i][0]},${globals.points[i][1]},${globals.points[i][2]}" style="left:${x}%;top:${y}%"></div>`;
@@ -180,40 +179,40 @@ const saveNifti = (data) => {
     mv.mri.vox2mm(),
     new Uint16Array(data)
   );
-  const name = prompt("Save mask as...", "mask.nii.gz");
-  if(name !== null) {
+  const name = prompt('Save mask as...', 'mask.nii.gz');
+  if (name !== null) {
     mv.mri.saveNifti(niigz, name);
   }
 };
 
 const thresholdWorker = (callback) => {
-  const worker = new Worker("thresholdmann-worker.js");
-  worker.onmessage = function(e) {
-    var {msg} = e.data;
-    switch(msg) {
+  const worker = new Worker('thresholdmann-worker.js');
+  worker.onmessage = function (e) {
+    const {msg} = e.data;
+    switch (msg) {
     case 'success':
-      console.log("Worker finished");
+      console.log('Worker finished');
 
       return callback(e.data.mask);
     case 'progress': {
-      const v = e.data.value.split(',').map( (x) => parseInt(x) );
-      document.querySelector("#progress").innerText = `Thresholding ${v[0]+1} out of ${v[1]}`;
+      const v = e.data.value.split(',').map((x) => parseInt(x));
+      document.querySelector('#progress').innerText = `Thresholding ${v[0] + 1} out of ${v[1]}`;
       break;
     }
     default:
-      console.log("wrkr: " + e.data.msg);
+      console.log('wrkr: ' + e.data.msg);
     }
   };
-  console.log("Start worker");
-  document.querySelector("#progress").style.display = "inline-block";
+  console.log('Start worker');
+  document.querySelector('#progress').style.display = 'inline-block';
   const params = {
-    cmd: "start",
+    cmd: 'start',
     mri: globals.mv.mri.data,
     dim: globals.mv.mri.dim,
     maxValue: globals.mv.maxValue,
     points: globals.points,
     values: globals.values,
-    directionUp: (globals.selectedDirection === "SelectUp")
+    directionUp: (globals.selectedDirection === 'SelectUp')
   };
   worker.postMessage(params);
 };
@@ -224,52 +223,51 @@ const thresholdWorker = (callback) => {
 const thresholdJob = () => {
   thresholdWorker((data) => {
     saveNifti(data);
-    document.querySelector("#progress").innerText = 'Done';
-    setTimeout( () => {
-      document.querySelector("#progress").innerText = "";
-      document.querySelector("#progress").style.display = "none";
+    document.querySelector('#progress').innerText = 'Done';
+    setTimeout(() => {
+      document.querySelector('#progress').innerText = '';
+      document.querySelector('#progress').style.display = 'none';
     }, 2000);
   });
 };
 
 const _setPixelFromValue = (px, ind, val, selectedOverlay) => {
   const {alpha} = globals;
-  const r = px.data[4*ind+0];
-  const mr = alpha*255 + (1-alpha) * px.data[4*ind+0];
-  if(selectedOverlay === 'Threshold Mask') {
-    if (globals.selectedDirection === "SelectUp") {
-      px.data[4*ind+0] = (r>=val)?mr:r;
+  const r = px.data[4 * ind + 0];
+  const mr = alpha * 255 + (1 - alpha) * px.data[4 * ind + 0];
+  if (selectedOverlay === 'Threshold Mask') {
+    if (globals.selectedDirection === 'SelectUp') {
+      px.data[4 * ind + 0] = (r >= val) ? mr : r;
     } else {
-      px.data[4*ind+0] = (r<=val)?mr:r;
+      px.data[4 * ind + 0] = (r <= val) ? mr : r;
     }
-    px.data[4*ind+1] = r;
-    px.data[4*ind+2] = r;
+    px.data[4 * ind + 1] = r;
+    px.data[4 * ind + 2] = r;
   } else {
-    px.data[4*ind+0] = val|0;
-    px.data[4*ind+1] = val|0;
-    px.data[4*ind+2] = val|0;
-    px.data[4*ind+3] = 255;
+    px.data[4 * ind + 0] = val | 0;
+    px.data[4 * ind + 1] = val | 0;
+    px.data[4 * ind + 2] = val | 0;
+    px.data[4 * ind + 3] = 255;
   }
 };
 
 const threshold = () => {
   const {mv, interpolate, selectedOverlay} = globals;
-  if(typeof interpolate === 'undefined') {
+  if (typeof interpolate === 'undefined') {
     return;
   }
 
   let ind, s, x, y;
   const [{canvas, plane, slice}] = mv.views;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const {width, height} = canvas;
   const {W, H} = mv.dimensions.voxel[plane];
   const px = ctx.getImageData(0, 0, width, height);
-  for(x=0; x<W; x++) {
-    for(y=0; y<H; y++) {
+  for (x = 0; x < W; x++) {
+    for (y = 0; y < H; y++) {
       s = slice2volume(plane, x, y, slice, H);
-      ind = y*width + x;
+      ind = y * width + x;
       _setPixelFromValue(
-        // eslint-disable-next-line new-cap
         px, ind, interpolate(/*mv.S2IJK(s)*/s), selectedOverlay);
     }
   }
@@ -278,8 +276,8 @@ const threshold = () => {
 
 const selectThresholdSlider = (cpid) => {
   const {ijk} = document.querySelector(`#${cpid}`).dataset;
-  if (document.querySelector("tr.selected")) {
-    document.querySelector("tr.selected").classList.remove('selected');
+  if (document.querySelector('tr.selected')) {
+    document.querySelector('tr.selected').classList.remove('selected');
   }
   const trSelected = document.querySelector(`#control tr[data-ijk="${ijk}"]`);
   trSelected.classList.add('selected');
@@ -291,7 +289,7 @@ const addControlPoint = (i, j, k) => {
   globals.points.push([i, j, k]);
   globals.values.push(globals.prevValue);
   displayControlPointsTable();
-  globals.selectedControlPoint = "cp" + (globals.points.length-1);
+  globals.selectedControlPoint = 'cp' + (globals.points.length - 1);
   mv.draw();
   selectThresholdSlider(globals.selectedControlPoint);
 };
@@ -299,7 +297,7 @@ const addControlPoint = (i, j, k) => {
 const clickOnViewer = (ev) => {
   const [i, j, k] = canvas2voxel(ev);
 
-  switch(globals.selectedTool) {
+  switch (globals.selectedTool) {
   case 'Select':
     break;
   case 'Add':
@@ -310,19 +308,17 @@ const clickOnViewer = (ev) => {
 
 const selectControlPoint = (cpid) => {
   $('.cpoint.selected').removeClass('selected');
-  $('#'+cpid).addClass('selected');
+  $('#' + cpid).addClass('selected');
 };
-
 
 
 /** Handle clicking on a row of the control points table
  * @param {HTMLElement} trSelected - the row element
  * @returns {void}
 */
-// eslint-disable-next-line no-unused-vars
-const selectRow = (trSelected) => {
+window.selectRow = (trSelected) => {
   // select the table row
-  document.querySelectorAll('tr.selected').forEach( (tr) => {
+  document.querySelectorAll('tr.selected').forEach((tr) => {
     tr.classList.remove('selected');
   });
   trSelected.classList.add('selected');
@@ -332,7 +328,7 @@ const selectRow = (trSelected) => {
   const [{plane}] = mv.views;
   let slice;
   const ijk = trSelected.dataset.ijk.split(',').map((x) => parseInt(x));
-  switch(plane) {
+  switch (plane) {
   case 'sag':
     [slice] = ijk;
     break;
@@ -346,10 +342,10 @@ const selectRow = (trSelected) => {
   mv.setSlice(mv.views[0], slice);
 
   // move the slider
-  document.querySelector("input.slice").value = slice;
+  document.querySelector('input.slice').value = slice;
 
   // select the control point
-  document.querySelectorAll('.cpoint').forEach( (cp) => {
+  document.querySelectorAll('.cpoint').forEach((cp) => {
     cp.classList.remove('selected');
   });
   const {cpid} = trSelected.dataset;
@@ -360,11 +356,10 @@ const selectRow = (trSelected) => {
 
 /** Handle changes in threshold triggered by the sliders
  * in the control points table.
- * @param {HTMLElement} ob - the slider element
+ * @param {HTMLElement} ev - the slider element
  * @returns {void}
  */
-// eslint-disable-next-line no-unused-vars
-const changeThreshold = (ev) => {
+window.changeThreshold = (ev) => {
   ev.preventDefault();
 
   const el = ev.target;
@@ -373,11 +368,11 @@ const changeThreshold = (ev) => {
   const tr = el.closest('tr');
   const data = tr.dataset.ijk;
 
-  tr.querySelector("input[type=text]").value = val.toFixed(0);
+  tr.querySelector('input[type=number]').value = val.toFixed(0);
 
   let i;
-  for(i=globals.points.length-1; i>=0; i--) {
-    if(data === globals.points[i][0]+','+globals.points[i][1]+','+globals.points[i][2]) {
+  for (i = globals.points.length - 1; i >= 0; i--) {
+    if (data === globals.points[i][0] + ',' + globals.points[i][1] + ',' + globals.points[i][2]) {
       globals.values[i] = val;
       globals.prevValue = val;
     }
@@ -392,19 +387,18 @@ const changeThreshold = (ev) => {
   }
 };
 
-// eslint-disable-next-line no-unused-vars
-const inputThreshold = (ob) => {
+window.inputThreshold = (ob) => {
   const {mv} = globals;
   const val = parseFloat(ob.value);
   const tr = ob.closest('tr');
   const data = tr.dataset.ijk;
   const cpid = document.querySelector(`div.cpoint[data-ijk="${data}"]`).id;
 
-  tr.querySelector("input[type=range]").value = val.toFixed(0);
+  tr.querySelector('input[type=range]').value = val.toFixed(0);
 
   let i;
-  for(i=globals.points.length-1; i>=0; i--) {
-    if(data === globals.points[i][0]+','+globals.points[i][1]+','+globals.points[i][2]) {
+  for (i = globals.points.length - 1; i >= 0; i--) {
+    if (data === globals.points[i][0] + ',' + globals.points[i][1] + ',' + globals.points[i][2]) {
       globals.values[i] = val;
       globals.prevValue = val;
     }
@@ -415,18 +409,20 @@ const inputThreshold = (ob) => {
 };
 
 const controlPointMoveHandler = (ev) => {
-  if (globals.selectedTool !== "Move") {
+  if (globals.selectedTool !== 'Move') {
     return;
   }
 
-  if(globals.selectedControlPoint === null) {
+  if (globals.selectedControlPoint === null) {
     return;
   }
 
   const cpid = globals.selectedControlPoint;
-  const cpidIndex = cpid.replace("cp", "")|0;
+  const cpidIndex = cpid.replace('cp', '') | 0;
   const {mv} = globals;
-  const [i, j, k] = canvas2voxel(ev);
+  const {dim} = mv.dimensions.voxel;
+  const [i, j, k] = canvas2voxel(ev)
+    .map((index, axis) => Math.max(0, Math.min(index, dim[axis] - 1))); // Ensure each value is within bounds
 
   globals.points[cpidIndex][0] = i;
   globals.points[cpidIndex][1] = j;
@@ -436,12 +432,12 @@ const controlPointMoveHandler = (ev) => {
 };
 
 const controlPointUpHandler = (ev) => {
-  console.log("Up");
+  console.log('Up');
   const {mv} = globals;
   const cpid = ev.target.id;
   const match = cpid.match(/cp[\d]+/);
 
-  switch(globals.selectedTool) {
+  switch (globals.selectedTool) {
   case 'Select':
     if (match === null) {
       return;
@@ -454,9 +450,9 @@ const controlPointUpHandler = (ev) => {
       return;
     }
     let i;
-    const data = $('#'+cpid).data().ijk;
-    for(i=globals.points.length-1; i>=0; i--) {
-      if(data === globals.points[i][0]+','+globals.points[i][1]+','+globals.points[i][2]) {
+    const data = $('#' + cpid).data().ijk;
+    for (i = globals.points.length - 1; i >= 0; i--) {
+      if (data === globals.points[i][0] + ',' + globals.points[i][1] + ',' + globals.points[i][2]) {
         globals.points.splice(i, 1);
         globals.values.splice(i, 1);
       }
@@ -468,18 +464,18 @@ const controlPointUpHandler = (ev) => {
   }
 
   globals.selectedControlPoint = null;
-  console.log("Up");
+  console.log('Up');
 };
 
 const controlPointDownHandler = (ev) => {
-  console.log("controlPointDownHandler", ev.target.id);
+  console.log('controlPointDownHandler', ev.target.id);
   const cpid = ev.target.id;
   if (cpid.match(/cp[\d]+/) === null) {
 
     return;
   }
 
-  if (globals.selectedTool === "Move") {
+  if (globals.selectedTool === 'Move') {
     globals.selectedControlPoint = cpid;
     selectControlPoint(cpid);
   }
@@ -494,47 +490,33 @@ const saveMask = () => {
   thresholdJob();
 };
 
-/** Save the selection mask produced by the
- * threshold, but in the main thread.
- * @deprecated
- * @returns {void}
- */
-// eslint-disable-next-line no-unused-vars
-const saveMaskOLD = () => {
-  const {mv, interpolate} = globals;
-  const [dim] = mv.mri;
-  const data = new Float32Array(dim[0]*dim[1]*dim[2]);
-  let val;
-  let i, j, k;
-  let ijk;
-  for(i=0; i<dim[0]; i++) {
-    for(j=0; j<dim[1]; j++) {
-      for(k=0; k<dim[2]; k++) {
-        ijk = k*dim[1]*dim[0] + j*dim[0] + i;
-        val = interpolate([i, j, k])*mv.maxValue/255;
-
-        if(mv.mri.data[ijk] <= val) {
-          data[ijk] = 0;
-        } else {
-          data[ijk] = 1;
-        }
-      }
-    }
-  }
-  saveNifti(data);
-};
-
 const saveControlPoints = () => {
-  var a = document.createElement('a');
+  const a = document.createElement('a');
   const {points, values} = globals;
   const ob = { points, values };
   a.href = 'data:application/json;charset=utf-8,' + JSON.stringify(ob);
-  const name = prompt("Save Control Points As...", "control-points.json");
-  if(name !== null) {
+  const name = prompt('Save Control Points As...', 'control-points.json');
+  if (name !== null) {
     a.download = name;
     document.body.appendChild(a);
     a.click();
   }
+};
+
+const getPoints = (points) => {
+  const newPoints = points.map((row) => {
+    const newRow = row.map(Number);
+
+    return (newRow.some(isNaN))?NaN:newRow;
+  });
+
+  return (newPoints.some((item) => !Array.isArray(item)))?[]:newPoints;
+};
+
+const getValues = (values) => {
+  const newValues = values.map(Number);
+
+  return (newValues.some(isNaN))?[]:newValues;
 };
 
 /** Load control points from a text file.
@@ -543,16 +525,25 @@ const saveControlPoints = () => {
  * @returns {void}
  */
 const loadControlPoints = () => {
-  var input = document.createElement("input");
-  input.type = "file";
+  const input = document.createElement('input');
+  input.type = 'file';
   input.onchange = () => {
     const [file] = input.files;
     const reader = new FileReader();
     reader.onload = (ev) => {
       const str = ev.target.result;
       const ob = JSON.parse(str);
-      globals.points = ob.points;
-      globals.values = ob.values;
+
+      const points = getPoints(ob.points);
+      const values = getValues(ob.values);
+      if (points.length === 0 || values.length === 0) {
+        alert('Invalid control points file');
+
+        return;
+      }
+
+      globals.points = points;
+      globals.values = values;
       displayControlPointsTable();
       globals.mv.draw();
     };
@@ -607,10 +598,10 @@ const _newPlaneSelectionUI = () => {
 const render3D = () => {
   // puts a fresh version of the segmentation in localStorage
   thresholdWorker((data) => {
-    document.querySelector("#progress").innerText = 'Done';
-    setTimeout( () => {
-      document.querySelector("#progress").innerText = "";
-      document.querySelector("#progress").style.display = "none";
+    document.querySelector('#progress').innerText = 'Done';
+    setTimeout(() => {
+      document.querySelector('#progress').innerText = '';
+      document.querySelector('#progress').style.display = 'none';
     }, 2000);
 
     const dim = new Uint16Array([...globals.mv.mri.dim, 0]);
@@ -623,26 +614,26 @@ const render3D = () => {
 const initKeyboardShortcuts = () => {
   document.addEventListener('keydown', (ev) => {
     const {key} = ev;
-    switch(key) {
+    switch (key) {
     case 's':
       globals.selectedTool = 'Select';
-      document.querySelector('#tools').querySelector(".mui-pressed").classList.remove("mui-pressed");
-      document.querySelector('#tools').querySelector(`[title="Select"`).classList.add("mui-pressed");
+      document.querySelector('#tools').querySelector('.mui-pressed').classList.remove('mui-pressed');
+      document.querySelector('#tools').querySelector('[title="Select"]').classList.add('mui-pressed');
       break;
     case 'a':
       globals.selectedTool = 'Add';
-      document.querySelector('#tools').querySelector(".mui-pressed").classList.remove("mui-pressed");
-      document.querySelector('#tools').querySelector(`[title="Add"`).classList.add("mui-pressed");
+      document.querySelector('#tools').querySelector('.mui-pressed').classList.remove('mui-pressed');
+      document.querySelector('#tools').querySelector('[title="Add"]').classList.add('mui-pressed');
       break;
     case 'r':
       globals.selectedTool = 'Remove';
-      document.querySelector('#tools').querySelector(".mui-pressed").classList.remove("mui-pressed");
-      document.querySelector('#tools').querySelector(`[title="Remove"`).classList.add("mui-pressed");
+      document.querySelector('#tools').querySelector('.mui-pressed').classList.remove('mui-pressed');
+      document.querySelector('#tools').querySelector('[title="Remove"]').classList.add('mui-pressed');
       break;
     case 'm':
       globals.selectedTool = 'Move';
-      document.querySelector('#tools').querySelector(".mui-pressed").classList.remove("mui-pressed");
-      document.querySelector('#tools').querySelector(`[title="Move"`).classList.add("mui-pressed");
+      document.querySelector('#tools').querySelector('.mui-pressed').classList.remove('mui-pressed');
+      document.querySelector('#tools').querySelector('[title="Move"]').classList.add('mui-pressed');
       break;
     }
   });
@@ -654,9 +645,9 @@ const initUI = () => {
   // Default control point
   globals.points = [
     [
-      mv.mri.dim[0]/2|0,
-      mv.mri.dim[1]/2|0,
-      mv.mri.dim[2]/2|0
+      mv.mri.dim[0] / 2 | 0,
+      mv.mri.dim[1] / 2 | 0,
+      mv.mri.dim[2] / 2 | 0
     ]
   ];
   globals.values = [127];
@@ -666,7 +657,7 @@ const initUI = () => {
 
   // Display volume info
   const {dim, pixdim} = mv.mri;
-  document.querySelector("#info").innerHTML = `<b>Information</b><br />
+  document.querySelector('#info').innerHTML = `<b>Information</b><br />
   <b>file:</b> ${mv.mri.fileName}<br />
   <b>dim:</b> ${dim[0]} x ${dim[1]} x ${dim[2]}<br />
   <b>pixdim:</b> ${pixdim[0].toFixed(2)} x ${pixdim[1].toFixed(2)} x ${pixdim[2].toFixed(2)}<br />`;
@@ -679,11 +670,12 @@ const initUI = () => {
   // Listen to canvas clicks
   $('body').on('click', 'canvas', clickOnViewer);
 
-  document.querySelector("#panels").style.display = "flex";
+  document.querySelector('#panels').style.display = 'flex';
   $('#tools, #direction, #overlay, #saveMask, #saveControlPoints, #loadControlPoints').show();
+  $('#footer').hide();
   $('#upload-box').removeClass('init');
 
-  globals.mv.draw = function draw() {
+  globals.mv.draw = function draw () {
     globals.originalDraw();
     threshold();
     displayControlPoints();
@@ -695,21 +687,21 @@ const initUI = () => {
   // Initialise UI
   MUI.chose(document.querySelector('#tools'), (option) => {
     globals.selectedTool = option;
-    switch(globals.selectedTool) {
-    case "Add":
+    switch (globals.selectedTool) {
+    case 'Add':
       break;
-    case "Remove":
+    case 'Remove':
       break;
     }
   });
   MUI.chose(document.querySelector('#direction'), (option) => {
     globals.selectedDirection = option;
-    switch(globals.selectedDirection) {
-    case "SelectUp":
-      console.log("SelectUp");
+    switch (globals.selectedDirection) {
+    case 'SelectUp':
+      console.log('SelectUp');
       break;
-    case "SelectDown":
-      console.log("SelectDown");
+    case 'SelectDown':
+      console.log('SelectDown');
       break;
     }
     mv.draw();
@@ -736,7 +728,7 @@ const _newMRIViewer = ({file, path}) => {
     space: 'voxel',
     views: [
       {
-        elem: document.querySelector("#viewer"),
+        elem: document.querySelector('#viewer'),
         width: 800,
         plane: 'sag',
         addPlaneSelect: false,
@@ -750,12 +742,12 @@ const _newMRIViewer = ({file, path}) => {
 const _display = async () => {
   try {
     await globals.mv.display();
-  } catch(err) {
+  } catch (err) {
     throw new Error(err);
   }
 };
 
-const init = async (file) => {
+window.init = async (file) => {
   _newMRIViewer({file});
   await _display();
   initUI();
@@ -765,14 +757,13 @@ const init = async (file) => {
  * the HTML page.
  * @returns {void}
  */
-// eslint-disable-next-line no-unused-vars
-const loadNifti = () => {
-  var input = document.createElement("input");
-  input.type = "file";
-  input.onchange = function() {
-    var [file] = this.files;
+window.loadNifti = () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.onchange = function () {
+    const [file] = this.files;
     console.log('loading', file);
-    init(file);
+    window.init(file);
   };
   input.click();
 };
@@ -783,11 +774,20 @@ const loadNifti = () => {
  * @param {string} path - the path to the Nifti file
  * @returns {void}
  */
-// eslint-disable-next-line no-unused-vars
-const initWithPath = async (path) => {
+window.initWithPath = async (path) => {
   _newMRIViewer({path});
   await _display();
   initUI();
+};
+
+/** Load nifti data from a URL.
+ * This function is called from
+ * the HTML page.
+ * @returns {void}
+ */
+window.loadDemoData = () => {
+  const url = 'img/bear_uchar.nii.gz';
+  window.initWithPath(url);
 };
 
 /** Adjust transparency of the thresholding mask. This
@@ -795,24 +795,10 @@ const initWithPath = async (path) => {
  * @param {Event} ev - the event
  * @returns {void}
  */
-// eslint-disable-next-line no-unused-vars
-const changeAlpha = (ev) => {
-  const newAlpha = Number(ev.target.value)/100;
+window.changeAlpha = (ev) => {
+  const newAlpha = Number(ev.target.value) / 100;
   globals.alpha = newAlpha;
   globals.mv.draw();
-};
-
-/** Adjust the brightness of the brain MRI. This
- * function is called from the HTML page.
- * @param {Event} ev - the event
- * @returns {void}
- */
-// eslint-disable-next-line no-unused-vars
-const changeBrightness = (ev) => {
-  const {brightness} = globals;
-  const contrast = Number(ev.target.value)/100;
-  globals.contrast = contrast;
-  document.querySelector('canvas.viewer').style.filter = `brightness(${brightness}) contrast(${contrast})`;
 };
 
 /** Adjust the contrast of the brain MRI. This
@@ -820,9 +806,20 @@ const changeBrightness = (ev) => {
  * @param {Event} ev - the event
  * @returns {void}
  */
-// eslint-disable-next-line no-unused-vars
-const changeContrast = (ev) => {
-  const brightness = Number(ev.target.value)/100;
+window.changeContrast = (ev) => {
+  const {brightness} = globals;
+  const contrast = Number(ev.target.value) / 100;
+  globals.contrast = contrast;
+  document.querySelector('canvas.viewer').style.filter = `brightness(${brightness}) contrast(${contrast})`;
+};
+
+/** Adjust the brightness of the brain MRI. This
+ * function is called from the HTML page.
+ * @param {Event} ev - the event
+ * @returns {void}
+ */
+window.changeBrightness = (ev) => {
+  const brightness = Number(ev.target.value) / 100;
   const {contrast} = globals;
   globals.brightness = brightness;
   document.querySelector('canvas.viewer').style.filter = `brightness(${brightness}) contrast(${contrast})`;

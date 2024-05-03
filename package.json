@@ -4,7 +4,9 @@
   "description": "A Web tool for interactively creating adaptive thresholds to segment nifti images.",
   "main": "thresholdmann.js",
   "scripts": {
-    "test": "http-server . & sleep 2 & mocha --exit"
+    "start": "http-server .",
+    "test": "npm run install:browsers; mocha --require fixtures.mjs --exit",
+    "install:browsers": "npx playwright install"
   },
   "repository": {
     "type": "git",
@@ -25,9 +27,11 @@
   },
   "homepage": "https://github.com/neuroanatomy/thresholdmann#readme",
   "devDependencies": {
-    "puppeteer": "^5.4.1"
+    "@playwright/test": "^1.41.2",
+    "mocha": "^10.2.0"
   },
   "dependencies": {
-    "eslint-config-naat": "github:neuroanatomy/eslint-config-naat"
+    "eslint-config-naat": "github:neuroanatomy/eslint-config-naat",
+    "http-server": "^14.1.1"
   }
 }
